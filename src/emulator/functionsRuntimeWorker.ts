@@ -91,6 +91,12 @@ export class RuntimeWorker {
   }
 
   private processStream(s: Serializable, buf: string): string {
+    // the code below assumes that all sent types are buffers.
+    // However, when node is run in watch mode it will send a message to the parent process about each module
+    if (!Buffer.isBuffer(s)) { 
+      return "";
+    }
+    
     buf += s.toString();
 
     const lines = buf.split("\n");

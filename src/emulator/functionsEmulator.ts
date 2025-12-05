@@ -1551,7 +1551,7 @@ export class FunctionsEmulator implements EmulatorInstance {
     backend: EmulatableBackend,
     envs: Record<string, string>,
   ): Promise<FunctionsRuntimeInstance> {
-    const args = [path.join(__dirname, "functionsEmulatorRuntime")];
+    const args = ["--watch", path.join(__dirname, "functionsEmulatorRuntime")];
     if (this.debugMode) {
       if (process.env.FIREPIT_VERSION) {
         this.logger.log(
