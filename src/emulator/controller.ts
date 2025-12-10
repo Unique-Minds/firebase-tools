@@ -262,8 +262,8 @@ function findExportMetadata(importPath: string): ExportMetadata | undefined {
 interface EmulatorOptions extends Options {
   extDevEnv?: Record<string, string>;
   logVerbosity?: "DEBUG" | "INFO" | "QUIET" | "SILENT";
+  watch?: boolean;
 }
-
 /**
  * Start all emulators.
  */
@@ -619,6 +619,7 @@ export async function startAll(
       verbosity: options.logVerbosity,
       projectAlias: options.projectAlias,
       extensionsEmulator: extensionEmulator,
+      watch: options.watch
     });
     await startEmulator(functionsEmulator);
 
