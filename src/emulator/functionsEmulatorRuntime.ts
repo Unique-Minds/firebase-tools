@@ -1055,8 +1055,15 @@ async function main(): Promise<void> {
       res.status(500).send(err.message);
     }
   });
-  app.listen(process.env.PORT, () => {
+  const server = app.listen(process.env.PORT, () => {
     logDebug(`Listening to port: ${process.env.PORT}`);
+  });
+
+  process.on("SIGTERM", () => {
+    logDebug("SIGTERM received");
+    server.close(() => {
+      logDebug('HTTP server closed')
+      })
   });
 
   // Event emitters do not work well with async functions, so we
