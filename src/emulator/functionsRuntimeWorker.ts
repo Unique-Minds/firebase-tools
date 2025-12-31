@@ -93,10 +93,10 @@ export class RuntimeWorker {
   private processStream(s: Serializable, buf: string): string {
     // the code below assumes that all sent types are buffers.
     // However, when node is run in watch mode it will send a message to the parent process about each module
-    if (!Buffer.isBuffer(s)) { 
+    if (!Buffer.isBuffer(s)) {
       return "";
     }
-    
+
     buf += s.toString();
 
     const lines = buf.split("\n");
@@ -136,9 +136,19 @@ export class RuntimeWorker {
     req: http.RequestOptions,
     resp: http.ServerResponse,
     body?: unknown,
-    debug?: boolean,
+    debug?: boolean
   ): Promise<void> {
-    if (this.triggerKey !== FREE_WORKER_KEY) {
+    return this.requestWithRetry(req, resp, body, debug, 0);
+  }
+
+  private requestWithRetry(
+    req: http.RequestOptions,
+    resp: http.ServerResponse,
+    body: unknown,
+    debug: boolean | undefined,
+    retryCount: number
+  ): Promise<void> {
+    if (this.triggerKey !== FREE_WORKER_KEY && retryCount === 0) {
       this.logInfo(`Beginning execution of "${this.triggerKey}"`);
     }
     const startHrTime = process.hrtime();
@@ -200,7 +210,32 @@ export class RuntimeWorker {
         );
         proxy.destroy();
       });
-      proxy.on("error", (err) => {
+      proxy.on("error", async (err: NodeJS.ErrnoException) => {
+        const errorCode = err.code;
+        const isRetryableError = errorCode === "ENOENT" || errorCode === "ECONNRESET";
+
+        if (isRetryableError && retryCount < 2) {
+          this.logger.log(
+            "DEBUG",
+            `Request failed with ${errorCode}, checking socket readiness (retry ${
+              retryCount + 1
+            }/2)`
+          );
+          try {
+            await this.isSocketReady();
+            this.logger.log("DEBUG", `Socket is ready, retrying request`);
+            // Retry the request
+            this.requestWithRetry(req, resp, body, debug, retryCount + 1).then(resolve);
+            return;
+          } catch (socketErr) {
+            this.logger.log("DEBUG", `Socket not ready: ${socketErr}`);
+          }
+        }
+
+        // If we get here, either:
+        // 1. It's not a retryable error
+        // 2. We've exhausted retries
+        // 3. Socket is not ready
         this.logger.log("ERROR", `Request to function failed: ${err}`);
         resp.writeHead(500);
         resp.write(JSON.stringify(err));
