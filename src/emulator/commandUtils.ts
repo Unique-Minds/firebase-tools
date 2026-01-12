@@ -55,9 +55,6 @@ export const DESC_VERBOSITY = "One of: DEBUG, INFO, QUIET, SILENT. "; // TODO co
 export const FLAG_UI = "--ui";
 export const DESC_UI = "run the Emulator UI";
 
-export const FLAG_WATCH = "--watch";
-export const DESC_WATCH = "use node to watch for changes to functions and hot reload without restarting the emulator";
-
 // Flags for the ext:dev:emulators:* commands
 export const FLAG_TEST_CONFIG = "--test-config <firebase.json file>";
 export const DESC_TEST_CONFIG =

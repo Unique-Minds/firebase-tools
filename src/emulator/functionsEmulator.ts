@@ -128,7 +128,6 @@ export interface FunctionsEmulatorArgs {
   adminSdkConfig?: AdminSdkConfig;
   projectAlias?: string;
   extensionsEmulator?: ExtensionsEmulator;
-  watch?: boolean;
 }
 
 /**
@@ -227,11 +226,9 @@ export class FunctionsEmulator implements EmulatorInstance {
   private watchers: chokidar.FSWatcher[] = [];
 
   debugMode = false;
-  hotReload = false;
 
   constructor(private args: FunctionsEmulatorArgs) {
     this.staticBackends = args.emulatableBackends;
-    this.hotReload = args.watch ?? false;
 
     // TODO: Would prefer not to have static state but here we are!
     EmulatorLogger.setVerbosity(
@@ -478,27 +475,24 @@ export class FunctionsEmulator implements EmulatorInstance {
         `Watching "${backend.functionsDir}" for Cloud Functions...`,
       );
 
-      // when using hotReload, let node do the watching to prevent restarting the emulator
-      if (!this.hotReload) {
-        const watcher = chokidar.watch(backend.functionsDir, {
-          ignored: [
-            /.+?[\\\/]node_modules[\\\/].+?/, // Ignore node_modules
-            /(^|[\/\\])\../, // Ignore files which begin the a period
-            /.+\.log/, // Ignore files which have a .log extension
-            /.+?[\\\/]venv[\\\/].+?/, // Ignore site-packages in venv
-            ...(backend.ignore?.map((i) => `**/${i}`) ?? []),
-          ],
-          persistent: true,
-        });
+      const watcher = chokidar.watch(backend.functionsDir, {
+        ignored: [
+          /.+?[\\\/]node_modules[\\\/].+?/, // Ignore node_modules
+          /(^|[\/\\])\../, // Ignore files which begin the a period
+          /.+\.log/, // Ignore files which have a .log extension
+          /.+?[\\\/]venv[\\\/].+?/, // Ignore site-packages in venv
+          ...(backend.ignore?.map((i) => `**/${i}`) ?? []),
+        ],
+        persistent: true,
+      });
 
-        this.watchers.push(watcher);
+      this.watchers.push(watcher);
 
-        const debouncedLoadTriggers = debounce(() => this.loadTriggers(backend), 1000);
-        watcher.on("change", (filePath) => {
-          this.logger.log("DEBUG", `File ${filePath} changed, reloading triggers`);
-          return debouncedLoadTriggers();
-        });
-      }
+      const debouncedLoadTriggers = debounce(() => this.loadTriggers(backend), 1000);
+      watcher.on("change", (filePath) => {
+        this.logger.log("DEBUG", `File ${filePath} changed, reloading triggers`);
+        return debouncedLoadTriggers();
+      });
 
       await this.loadTriggers(backend, /* force= */ true);
     }
@@ -1557,10 +1551,7 @@ export class FunctionsEmulator implements EmulatorInstance {
     backend: EmulatableBackend,
     envs: Record<string, string>,
   ): Promise<FunctionsRuntimeInstance> {
-    const args = [
-      ...this.hotReload ? ["--watch"] : [],
-      path.join(__dirname, "functionsEmulatorRuntime")
-    ];
+    const args = ["--watch", path.join(__dirname, "functionsEmulatorRuntime")];
     if (this.debugMode) {
       if (process.env.FIREPIT_VERSION) {
         this.logger.log(
