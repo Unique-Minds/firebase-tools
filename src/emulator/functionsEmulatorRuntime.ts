@@ -964,6 +964,10 @@ async function main(): Promise<void> {
   let lastSignal = new Date().getTime();
   let signalCount = 0;
   process.on("SIGINT", () => {
+    server.close(() => {
+      logDebug('HTTP server closed')
+    });
+    
     const now = new Date().getTime();
     if (now - lastSignal < 100) {
       return;
@@ -1063,7 +1067,7 @@ async function main(): Promise<void> {
     logDebug("SIGTERM received");
     server.close(() => {
       logDebug('HTTP server closed')
-      })
+    });
   });
 
   // Event emitters do not work well with async functions, so we
