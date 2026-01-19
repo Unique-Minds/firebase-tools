@@ -475,24 +475,26 @@ export class FunctionsEmulator implements EmulatorInstance {
         `Watching "${backend.functionsDir}" for Cloud Functions...`,
       );
 
-      const watcher = chokidar.watch(backend.functionsDir, {
-        ignored: [
-          /.+?[\\\/]node_modules[\\\/].+?/, // Ignore node_modules
-          /(^|[\/\\])\../, // Ignore files which begin the a period
-          /.+\.log/, // Ignore files which have a .log extension
-          /.+?[\\\/]venv[\\\/].+?/, // Ignore site-packages in venv
-          ...(backend.ignore?.map((i) => `**/${i}`) ?? []),
-        ],
-        persistent: true,
-      });
+      if (!process.env.FUNCTIONS_EMULATOR_DISABLE_WATCH) {
+        const watcher = chokidar.watch(backend.functionsDir, {
+          ignored: [
+            /.+?[\\\/]node_modules[\\\/].+?/, // Ignore node_modules
+            /(^|[\/\\])\../, // Ignore files which begin the a period
+            /.+\.log/, // Ignore files which have a .log extension
+            /.+?[\\\/]venv[\\\/].+?/, // Ignore site-packages in venv
+            ...(backend.ignore?.map((i) => `**/${i}`) ?? []),
+          ],
+          persistent: true,
+        });
 
-      this.watchers.push(watcher);
+        this.watchers.push(watcher);
 
-      const debouncedLoadTriggers = debounce(() => this.loadTriggers(backend), 1000);
-      watcher.on("change", (filePath) => {
-        this.logger.log("DEBUG", `File ${filePath} changed, reloading triggers`);
-        return debouncedLoadTriggers();
-      });
+        const debouncedLoadTriggers = debounce(() => this.loadTriggers(backend), 1000);
+        watcher.on("change", (filePath) => {
+          this.logger.log("DEBUG", `File ${filePath} changed, reloading triggers`);
+          return debouncedLoadTriggers();
+        });
+      }
 
       await this.loadTriggers(backend, /* force= */ true);
     }
@@ -1590,6 +1592,12 @@ export class FunctionsEmulator implements EmulatorInstance {
         const { host } = this.getInfo();
         args.unshift(`--inspect=${connectableHostname(host)}:${port}`);
       }
+    }
+
+    // It is useful to be able to pass additional node arguments to the runtime.
+    const nodeArgs = process.env.FUNCTIONS_EMULATOR_RUNTIME_NODE_ARGS;
+    if (nodeArgs) {
+      args.unshift(nodeArgs);
     }
 
     // Yarn 2 has a new feature called PnP (Plug N Play) which aims to completely take over
