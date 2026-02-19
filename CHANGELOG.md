@@ -2,3 +2,4 @@
   - Add support for `@searchable` on varchar fields.
   - Fix a runtime error when using aggregations with nested reference fields.
   - Update the Golang dependency version from v1.24.12 to v1.24.13.
+- Added new Developer Knowledge MCP tools
