@@ -1597,7 +1597,7 @@ export class FunctionsEmulator implements EmulatorInstance {
     // It is useful to be able to pass additional node arguments to the runtime.
     const nodeArgs = process.env.FUNCTIONS_EMULATOR_RUNTIME_NODE_ARGS;
     if (nodeArgs) {
-      args.unshift(nodeArgs);
+      args.unshift(...nodeArgs.split(" ").filter(Boolean));
     }
 
     // Yarn 2 has a new feature called PnP (Plug N Play) which aims to completely take over
