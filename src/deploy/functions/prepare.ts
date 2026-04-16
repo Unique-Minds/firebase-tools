@@ -213,7 +213,7 @@ export async function prepare(
   for (const [codebase, wantBackend] of Object.entries(wantBackends)) {
     const cfg = configForCodebase(context.config, codebase);
     const localCfg = requireLocal(cfg, "Remote sources are not supported.");
-    const sourceDirName = localCfg.source;
+    const sourceDirName = localCfg.bundledDir || localCfg.source;
     const sourceDir = options.config.path(sourceDirName);
     const source: args.Source = {};
     if (backend.someEndpoint(wantBackend, () => true)) {

@@ -183,6 +183,8 @@ type FunctionConfigBase = {
   // Must start with a lowercase letter; may contain lowercase letters, numbers, and dashes;
   // cannot start or end with a dash; maximum length 30 characters.
   prefix?: string;
+  // Optional: the bundled directory to use when deploying
+  bundledDir?: string;
 } & Deployable;
 
 export type LocalFunctionConfig = FunctionConfigBase & {
