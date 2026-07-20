@@ -109,6 +109,11 @@ export interface FunctionsRuntimeFeatures {
 export class HttpConstants {
   static readonly CALLABLE_AUTH_HEADER: string = "x-callable-context-auth";
   static readonly ORIGINAL_AUTH_HEADER: string = "x-original-auth";
+  // In debug mode, all triggers share a single runtime process. These headers
+  // carry the trigger routing info on the request itself so it cannot be
+  // clobbered by concurrent invocations (see https://github.com/firebase/firebase-tools/issues/4189).
+  static readonly FUNCTION_TARGET_HEADER: string = "x-emulator-function-target";
+  static readonly FUNCTION_SIGNATURE_HEADER: string = "x-emulator-function-signature";
 }
 
 export class EmulatedTrigger {

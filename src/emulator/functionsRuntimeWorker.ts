@@ -3,7 +3,11 @@ import * as uuid from "uuid";
 
 import { FunctionsRuntimeInstance } from "./functionsEmulator";
 import { EmulatorLog, Emulators, FunctionsExecutionMode } from "./types";
-import { EmulatedTriggerDefinition, FunctionsRuntimeBundle } from "./functionsEmulatorShared";
+import {
+  EmulatedTriggerDefinition,
+  FunctionsRuntimeBundle,
+  HttpConstants,
+} from "./functionsEmulatorShared";
 import { EventEmitter } from "events";
 import { EmulatorLogger, ExtensionLogInfo } from "./emulatorLogger";
 import { FirebaseError } from "../error";
@@ -410,6 +414,15 @@ export class RuntimeWorkerPool {
       );
     }
     if (debug) {
+      // The debug message sets global state in the runtime process, which is
+      // inherently racy when invocations overlap. The headers below carry the
+      // same routing info on the request itself; the runtime prefers them over
+      // the global state, so interleaved invocations can't corrupt each other.
+      req.headers = {
+        ...req.headers,
+        [HttpConstants.FUNCTION_TARGET_HEADER]: debug.functionTarget,
+        [HttpConstants.FUNCTION_SIGNATURE_HEADER]: debug.functionSignature,
+      };
       await worker.sendDebugMsg(debug);
     }
     return worker.request(req, resp, body, !!debug);

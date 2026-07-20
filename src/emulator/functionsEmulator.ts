@@ -410,17 +410,21 @@ export class FunctionsEmulator implements EmulatorInstance {
       }
     }
     const worker = pool.getIdleWorker(trigger.id)!;
+    const reqBody = JSON.stringify(body);
+    const headers: http.OutgoingHttpHeaders = {
+      "Content-Type": "application/json",
+      "Content-Length": `${reqBody.length}`,
+    };
     if (this.debugMode) {
+      // Route the invocation via headers rather than relying solely on the
+      // global state set by the debug message, which races when invocations overlap.
+      headers[HttpConstants.FUNCTION_TARGET_HEADER] = trigger.entryPoint;
+      headers[HttpConstants.FUNCTION_SIGNATURE_HEADER] = getSignatureType(trigger);
       await worker.sendDebugMsg({
         functionTarget: trigger.entryPoint,
         functionSignature: getSignatureType(trigger),
       });
     }
-    const reqBody = JSON.stringify(body);
-    const headers = {
-      "Content-Type": "application/json",
-      "Content-Length": `${reqBody.length}`,
-    };
     return new Promise((resolve, reject) => {
       const req = http.request(
         {

@@ -1030,14 +1030,38 @@ async function main(): Promise<void> {
   });
   app.all(`/*`, async (req: express.Request, res: express.Response) => {
     try {
-      const trigger = FUNCTION_TARGET_NAME.split(".").reduce((mod, functionTargetPart) => {
+      let functionTargetName = FUNCTION_TARGET_NAME;
+      let functionSignature = FUNCTION_SIGNATURE;
+      if (FUNCTION_DEBUG_MODE) {
+        // In debug mode, all triggers share this runtime process. The debug IPC
+        // message also sets FUNCTION_TARGET_NAME/FUNCTION_SIGNATURE, but that
+        // global state is racy when invocations overlap (e.g. an HTTP function
+        // and a Firestore trigger in flight at the same time), so prefer the
+        // routing info attached to the request itself.
+        const targetHeader = req.header(HttpConstants.FUNCTION_TARGET_HEADER);
+        const signatureHeader = req.header(HttpConstants.FUNCTION_SIGNATURE_HEADER);
+        if (targetHeader && signatureHeader) {
+          functionTargetName = targetHeader;
+          functionSignature = signatureHeader;
+        } else {
+          new EmulatorLog(
+            "WARN",
+            "runtime-warning",
+            "Expected function target and signature headers while in debug mode.",
+          ).log();
+        }
+        delete req.headers[HttpConstants.FUNCTION_TARGET_HEADER];
+        delete req.headers[HttpConstants.FUNCTION_SIGNATURE_HEADER];
+      }
+
+      const trigger = functionTargetName.split(".").reduce((mod, functionTargetPart) => {
         return mod?.[functionTargetPart];
       }, functionModule) as CloudFunction<unknown>;
       if (!trigger) {
-        throw new Error(`Failed to find function ${FUNCTION_TARGET_NAME} in the loaded module`);
+        throw new Error(`Failed to find function ${functionTargetName} in the loaded module`);
       }
 
-      switch (FUNCTION_SIGNATURE) {
+      switch (functionSignature) {
         case "event":
         case "cloudevent":
           let reqBody;
@@ -1048,7 +1072,7 @@ async function main(): Promise<void> {
           } else {
             reqBody = JSON.parse(rawBody.toString());
           }
-          await processBackground(trigger, reqBody, FUNCTION_SIGNATURE);
+          await processBackground(trigger, reqBody, functionSignature);
           res.send({ status: "acknowledged" });
           break;
         case "http":
