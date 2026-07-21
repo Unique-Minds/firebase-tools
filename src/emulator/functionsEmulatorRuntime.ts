@@ -1061,6 +1061,13 @@ async function main(): Promise<void> {
         throw new Error(`Failed to find function ${functionTargetName} in the loaded module`);
       }
 
+      new EmulatorLog(
+        "INFO",
+        "runtime-status",
+        `Beginning execution of "${functionTargetName}" (${functionSignature})`,
+      ).log();
+      const startHrTime = process.hrtime();
+
       switch (functionSignature) {
         case "event":
         case "cloudevent":
@@ -1078,6 +1085,15 @@ async function main(): Promise<void> {
         case "http":
           await runHTTPS(trigger, [req, res]);
       }
+
+      const elapsedHrTime = process.hrtime(startHrTime);
+      new EmulatorLog(
+        "INFO",
+        "runtime-status",
+        `Finished execution of "${functionTargetName}" in ${
+          elapsedHrTime[0] * 1000 + elapsedHrTime[1] / 1000000
+        }ms`,
+      ).log();
     } catch (err: any) {
       new EmulatorLog("FATAL", "runtime-error", err.stack ? err.stack : err).log();
       res.status(500).send(err.message);

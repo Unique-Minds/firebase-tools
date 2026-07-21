@@ -1,6 +1,6 @@
 {
   "name": "@uniqueminds/firebase-tools",
-  "version": "14.27.1",
+  "version": "14.27.2",
   "description": "Command-Line Interface for Firebase",
   "main": "./lib/index.js",
   "mcpName": "io.github.firebase/firebase-mcp",
